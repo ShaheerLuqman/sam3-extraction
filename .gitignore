@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Virtual env ---
+.venv/
+venv/
+
+# --- Large model weights ---
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# --- Data / working dirs (not source) ---
+dataset/
+datasets/
+data/
+inputs/
+outputs/
+features/
+runs/
+logs/
+tmp/
+
+# --- Media files ---
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# --- Cloned upstream repo (re-clone: git clone https://github.com/facebookresearch/sam3) ---
+sam3/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
