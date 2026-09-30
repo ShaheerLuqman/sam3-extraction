@@ -8,6 +8,7 @@ track every instance of it in an image or video, using Meta's **SAM 3**.
 ```
 .venv/              Python 3.12 virtual env (uv-managed)
 sam3/               cloned facebookresearch/sam3 (native repo, needed for video)
+patches/            local fixes applied on top of the sam3 clone (see Setup)
 checkpoints/        put sam3.pt here (from https://huggingface.co/facebook/sam3)
 inputs/             your images / videos
 outputs/            annotated results
@@ -39,7 +40,10 @@ detections.
 # 2. torch (CUDA 12.8 wheels)
 uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 
-# 3. the native SAM 3 repo + deps missing from its pyproject
+# 3. the native SAM 3 repo (pinned, plus our local patch) + deps missing from its pyproject
+git clone https://github.com/facebookresearch/sam3
+git -C sam3 checkout 660a5e9
+git -C sam3 apply ../patches/sam3-video-base-guards.patch
 uv pip install -e ./sam3
 uv pip install opencv-python matplotlib einops triton-windows pycocotools scikit-image psutil
 

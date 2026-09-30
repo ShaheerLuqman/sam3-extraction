@@ -1,0 +1,29 @@
+diff --git a/sam3/model/sam3_video_base.py b/sam3/model/sam3_video_base.py
+index 71b722e..20cc331 100644
+--- a/sam3/model/sam3_video_base.py
++++ b/sam3/model/sam3_video_base.py
+@@ -703,6 +703,10 @@ class Sam3VideoBase(nn.Module):
+         # Recondition the masklets based on the new detections
+         # pyre-fixme[16]: `List` has no attribute `items`.
+         for trk_obj_id, det_idx in trk_id_to_max_iou_high_conf_det.items():
++            # guard: a stale/out-of-range det_idx (seen when the detection-mask
++            # tensor is empty) would make the slice empty and crash below
++            if det_idx >= det_out["mask"].shape[0]:
++                continue
+             new_mask = det_out["mask"][det_idx : det_idx + 1]
+             input_mask_res = self.tracker.input_mask_size
+             new_mask_binary = (
+@@ -785,6 +789,13 @@ class Sam3VideoBase(nn.Module):
+                 trk_masks=tracker_low_res_masks_global,
+                 trk_obj_ids=tracker_metadata_prev["obj_ids_all_gpu"],
+             )
++            # guard: the compiled associator can emit a phantom "new detection"
++            # index past the end of det_scores_np -> drop those before they're
++            # used to index score / bbox arrays downstream
++            _n_det = len(det_scores_np)
++            new_det_fa_inds = new_det_fa_inds[
++                (new_det_fa_inds >= 0) & (new_det_fa_inds < _n_det)
++            ]
+             if self.suppress_det_close_to_boundary:
+                 keep = self._suppress_detections_close_to_boundary(
+                     det_bbox_xyxy[new_det_fa_inds]
