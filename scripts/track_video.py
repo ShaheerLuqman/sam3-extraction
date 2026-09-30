@@ -95,11 +95,27 @@ def main():
     H, W = frames[0].shape[:2]
     print(f"{len(frames)} frames @ {W}x{H}")
 
-    gpus = list(range(torch.cuda.device_count())) or None
+    # A box with no text is a pure *visual prompt*: the detector only fires on the
+    # prompt frame, so SAM3's "hotstart" heuristic (drop an object that isn't
+    # re-detected within its first few frames) suppresses every instance and the
+    # whole clip comes back empty. Disable hotstart for that case. It has to be
+    # set on the model object directly, which only works in-process, so also pin
+    # to a single GPU (the multi-GPU predictor runs the model in worker processes).
+    visual_only = bool(args.box) and not args.text
+
+    gpus = (list(range(torch.cuda.device_count())) or None)
+    if visual_only and gpus:
+        gpus = [torch.cuda.current_device()]
     kw = {}
     if args.ckpt:
         kw["checkpoint_path"] = str(args.ckpt)
     predictor = build_sam3_video_predictor(gpus_to_use=gpus, **kw)
+
+    if visual_only:
+        for attr in ("hotstart_delay", "hotstart_unmatch_thresh", "hotstart_dup_thresh"):
+            if hasattr(predictor.model, attr):
+                setattr(predictor.model, attr, 0)
+        print("visual-prompt (box, no text): hotstart suppression disabled")
 
     resp = predictor.handle_request(
         request=dict(type="start_session", resource_path=str(args.video))

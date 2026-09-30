@@ -1,0 +1,8 @@
+{
+  "main_cap": "cap",
+  "empty_main_cap": "cap",
+  "using_vaccum": "vacuum",
+  "empty_region": "empty slot",
+  "filled_cap": "cap",
+  "hand_w_bearing": "bearing"
+}

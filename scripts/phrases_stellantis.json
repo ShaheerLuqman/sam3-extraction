@@ -1,0 +1,14 @@
+{
+  "hands": "gloved hands",
+  "unit": "engine block",
+  "main_cap": "engine main bearing cap",
+  "empty_main_cap": "bearing cap without a bearing shell",
+  "removing_main_cap": "hand removing a bearing cap",
+  "using_vaccum": "vacuum cleaner nozzle",
+  "empty_region": "empty metal fixture slot",
+  "bearing_surface": "curved metal bearing saddle surface",
+  "empty_surface": "bare flat metal surface",
+  "filled_cap": "bearing cap with a bearing shell installed",
+  "empty_cap": "empty bearing cap",
+  "hand_w_bearing": "hand holding a bearing shell"
+}

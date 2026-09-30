@@ -41,6 +41,11 @@ tmp/
 # --- Cloned upstream repo (re-clone: git clone https://github.com/facebookresearch/sam3) ---
 sam3/
 
+# --- webapp ---
+webapp/frontend/node_modules/
+webapp/frontend/dist/
+webapp/backend/var/
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db

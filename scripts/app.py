@@ -43,7 +43,9 @@ def get_video_predictor():
     global _video_predictor
     if _video_predictor is None:
         from sam3.model_builder import build_sam3_video_predictor
-        gpus = list(range(torch.cuda.device_count())) or None
+        # single GPU: run_video tweaks model attributes (hotstart) in-process, which
+        # the multi-GPU predictor's worker processes wouldn't see.
+        gpus = [torch.cuda.current_device()] if torch.cuda.is_available() else None
         kw = {"checkpoint_path": CKPT} if CKPT else {}
         _video_predictor = build_sam3_video_predictor(gpus_to_use=gpus, **kw)
     return _video_predictor
@@ -228,6 +230,14 @@ def run_video(video, text, box_str, prompt_frame, max_frames, det_thr,
         predictor.model.score_threshold_detection = float(det_thr)
     except Exception:
         pass
+    # A box with no text is a pure visual prompt (detector fires only on the prompt
+    # frame); SAM3's hotstart heuristic then suppresses every instance for the whole
+    # clip. Disable it in that case, restore the defaults otherwise.
+    visual_only = bool(box_str.strip()) and not text
+    for attr, on in (("hotstart_delay", 15), ("hotstart_unmatch_thresh", 8),
+                     ("hotstart_dup_thresh", 8)):
+        if hasattr(predictor.model, attr):
+            setattr(predictor.model, attr, 0 if visual_only else on)
     progress(0.1, desc="starting session")
     sid = predictor.handle_request(
         request=dict(type="start_session", resource_path=video)

@@ -1,0 +1,659 @@
+/* ===========================================================================
+   Frame extraction — the viewer/panel split of the detect step, with a score
+   timeline under the frame.
+   =========================================================================== */
+.page.extract {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  height: 100%;
+}
+
+.xempty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.xempty .dropzone {
+  width: min(560px, 100%);
+}
+
+.xframe {
+  min-height: 220px;
+}
+.xframe video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #0d1117;
+}
+.xframe video.xhidden {
+  visibility: hidden;
+}
+.xframe-error {
+  position: absolute;
+  inset: auto 12px 12px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(254, 243, 242, 0.95);
+  border: 1px solid var(--danger-line);
+  color: var(--danger);
+  font-size: 13px;
+}
+.xbadges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+.xbadge {
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.93);
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.xbadge.in {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.xbadge.ref {
+  background: var(--ok-soft);
+  border-color: var(--ok-line);
+  color: var(--ok);
+}
+
+.xtools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* --- timeline ----------------------------------------------------------- */
+.timeline {
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  line-height: 0;
+}
+.timeline canvas {
+  display: block;
+  touch-action: none;
+}
+.timeline.placeholder {
+  height: 170px;
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  line-height: 1.5;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-3);
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+/* --- panel -------------------------------------------------------------- */
+.xhead h2 {
+  font-size: 19px;
+  margin-bottom: 4px;
+}
+.xtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 30ch;
+}
+.xreplace {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dropzone.compact {
+  min-height: 0;
+  padding: 12px;
+  gap: 2px;
+}
+.dropzone.compact .dz-icon {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+}
+
+/* references */
+.refgrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+.refcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.refthumb {
+  position: relative;
+  padding: 0;
+  border: 2px solid var(--brand);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: #0d1117;
+  aspect-ratio: 4 / 3;
+  line-height: 0;
+}
+.refthumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.refcell.off .refthumb {
+  border-color: var(--border-strong);
+}
+.refcell.off .refthumb img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.refnum {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--brand);
+  color: #fff;
+  font: 650 11.5px/1 system-ui, sans-serif;
+}
+.refcell.off .refnum {
+  background: var(--text-3);
+}
+.refwait {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font: 700 11px/1 system-ui, sans-serif;
+}
+.refmeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.refmeta .btn-text {
+  font-size: 12px;
+  padding: 0;
+}
+.refname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.refx {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+
+/* segments */
+.seglist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.segitem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.segitem.here {
+  border-color: var(--brand-line);
+  background: var(--brand-soft);
+}
+.segmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 4px 7px 9px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: var(--r-md);
+}
+.segidx {
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 650;
+  flex: none;
+}
+.segitem.here .segidx {
+  background: var(--brand);
+  color: #fff;
+}
+.segtext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.segtime {
+  font-weight: 600;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.segtime em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: 8px;
+}
+.segmeta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.segref {
+  width: 44px;
+  height: 33px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  flex: none;
+}
+.segactions {
+  display: flex;
+  gap: 4px;
+  flex: none;
+}
+.btn.icon.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+
+/* export */
+.xevery {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.xevery input {
+  width: 80px;
+}
+.xexport {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card.options textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font: 13px/1.45 system-ui, sans-serif;
+  resize: vertical;
+  font-weight: 400;
+}
+.card.options textarea:focus-visible {
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+
+@media (max-width: 1140px) {
+  .page.extract {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+  .page.extract .viewer {
+    height: auto;
+  }
+  .page.extract .viewer-canvas {
+    height: 50vh;
+  }
+}
+
+/* --- segment extraction: clip lists ------------------------------------- */
+.cliplist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cliprow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 7px 5px 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.cliprow img {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #0d1117;
+  flex: none;
+}
+.cliptext {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.clipname {
+  font-weight: 600;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xopt {
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+textarea.xtext {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  font: 400 13px/1.45 system-ui, sans-serif;
+  color: var(--text);
+  resize: vertical;
+}
+textarea.xtext:focus-visible {
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+
+/* --- segment extraction: marking the step -------------------------------- */
+.xbadge.other {
+  background: #f1ecfb;
+  border-color: #cdbdf0;
+  color: #5b3fa6;
+}
+.xbadge.sel {
+  background: var(--warn-soft);
+  border-color: var(--warn-line);
+  color: var(--warn);
+}
+.xtools .btn kbd {
+  margin-left: 2px;
+}
+.row.gap-sm {
+  gap: 6px;
+}
+.btn.small {
+  padding: 4px 9px;
+  font-size: 12.5px;
+}
+.btn.icon.small {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.markend {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.markend-label {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.markend-time {
+  justify-self: start;
+  padding: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.markend-time em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--text-3);
+  margin-left: 6px;
+}
+
+.clipmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+button.clipmain {
+  cursor: pointer;
+}
+
+/* back / next, at the foot of the panel */
+.xnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.card.query .card-head h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.query-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.xnav .btn {
+  white-space: nowrap;
+}
+
+/* --- play / pause ---------------------------------------------------------- */
+.btn.xplay {
+  min-width: 96px;
+  font-weight: 600;
+}
+.btn.xplay.on {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.xtools .btn {
+  white-space: nowrap;
+  flex: none;
+}
+.xtools .row {
+  flex-wrap: wrap;
+}
+.xrate {
+  width: auto;
+  flex: none;
+  padding: 6px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font: 500 13px system-ui, sans-serif;
+}
+.xplaynote {
+  font-size: 12.5px;
+  color: var(--warn);
+}
+
+/* --- frame extraction fawad segment ------------------------------------ */
+.row.spread {
+  justify-content: space-between;
+}
+.fopt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.fopt-head {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.fopt-head em {
+  color: var(--brand);
+  font-style: normal;
+  font-weight: 600;
+}
+.ffacts {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.ffacts dt {
+  color: var(--text-3);
+  font-weight: 600;
+}
+.ffacts dd {
+  margin: 0;
+}
+.fcmds {
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+.ftable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ftable th,
+.ftable td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+}
+.ftable tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.fimg {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin-bottom: 8px;
+}
+.fopts {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ffiles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  margin-bottom: 8px;
+}
+.ffiles-head {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.ffiles a {
+  padding-left: 12px;
+  overflow-wrap: anywhere;
+}
+.ffiles a em {
+  color: var(--text-3);
+  font-style: normal;
+}
+
+/* --- background upload ---------------------------------------------------- */
+.xupload {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.xupload-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.xupload-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.3s;
+}

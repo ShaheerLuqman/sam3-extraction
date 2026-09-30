@@ -109,6 +109,10 @@ def parse_args():
     p.add_argument("--offload", action="store_true",
                    help="keep frames + tracker state on CPU RAM (slower, but needed "
                         "for long clips / many objects on a small GPU)")
+    p.add_argument("--box-as-mask", action="store_true",
+                   help="seed the tracker with the box filled solid as a MASK "
+                        "(add_new_mask) instead of a box prompt SAM segments - "
+                        "propagates the rectangle's memory, no object segmentation")
     p.add_argument("--ckpt", type=Path, default=Path("checkpoints/sam3.pt"),
                    help="path to sam3.pt (omit / pass a missing path to use HF)")
     p.add_argument("--names", type=Path, default=None,
@@ -462,10 +466,15 @@ def main():
 
     # register each target box on its own prompt frame (obj_id = its index)
     for k, (f_idx, (x1, y1, x2, y2)) in enumerate(targets):
-        norm_box = torch.tensor([x1 / W, y1 / H, x2 / W, y2 / H], dtype=torch.float32)
-        predictor.add_new_points_or_box(
-            state, frame_idx=f_idx, obj_id=k, box=norm_box, clear_old_points=True,
-        )
+        if args.box_as_mask:
+            m = torch.zeros(H, W, dtype=torch.bool)
+            m[int(round(y1)):int(round(y2)), int(round(x1)):int(round(x2))] = True
+            predictor.add_new_mask(state, frame_idx=f_idx, obj_id=k, mask=m)
+        else:
+            norm_box = torch.tensor([x1 / W, y1 / H, x2 / W, y2 / H], dtype=torch.float32)
+            predictor.add_new_points_or_box(
+                state, frame_idx=f_idx, obj_id=k, box=norm_box, clear_old_points=True,
+            )
 
     tracks = {str(k): [None] * n_track for k in range(len(targets))}
 

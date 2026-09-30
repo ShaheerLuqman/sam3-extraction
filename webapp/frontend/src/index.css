@@ -1,0 +1,155 @@
+/* Light design tokens. The app is deliberately light-only: it is used on a
+   shop-floor laptop under bright light, where the dark build washed out. */
+:root {
+  color-scheme: light;
+
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --surface-2: #f3f5f9;
+  --surface-3: #e9edf4;
+
+  --border: #e2e7f0;
+  --border-strong: #c9d2e0;
+
+  --text: #16202e;
+  --text-2: #4a5768;
+  --text-3: #74819a;
+
+  --brand: #2563eb;
+  --brand-dark: #1d4ed8;
+  --brand-soft: #eef4ff;
+  --brand-line: #c3d8ff;
+
+  --ok: #0f7b5a;
+  --ok-soft: #e6f6f0;
+  --ok-line: #b6e3d2;
+
+  --warn: #9a5b06;
+  --warn-soft: #fff5e6;
+  --warn-line: #f3d9ab;
+
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+  --danger-line: #f6c9c4;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 32, 51, 0.06);
+  --shadow-md: 0 2px 8px rgba(20, 32, 51, 0.07), 0 1px 2px rgba(20, 32, 51, 0.05);
+  --shadow-lg: 0 12px 32px rgba(20, 32, 51, 0.1), 0 2px 6px rgba(20, 32, 51, 0.05);
+
+  --ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* --- form controls ------------------------------------------------------ */
+select,
+input[type='text'],
+input[type='number'] {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+select:hover,
+input[type='text']:hover,
+input[type='number']:hover {
+  border-color: #aab7c9;
+}
+
+select:focus-visible,
+input[type='text']:focus-visible,
+input[type='number']:focus-visible {
+  border-color: var(--brand);
+  box-shadow: var(--ring);
+}
+
+select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%234a5768' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5 6 6.5 11 1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  padding-right: 28px;
+}
+
+input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brand);
+  cursor: pointer;
+  margin: 0;
+}
+
+input[type='range'] {
+  width: 100%;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+kbd {
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 3px 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-2);
+}
