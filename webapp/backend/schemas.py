@@ -253,6 +253,51 @@ class SegxSearchRequest(BaseModel):
     stride: int = Field(5, ge=1, le=30)
 
 
+# --------------------------------------------------------------------------- #
+# multiple class segmentation
+# --------------------------------------------------------------------------- #
+class McsegDescribeRequest(BaseModel):
+    """Have the VLM name and describe each of these steps: one list of clips per step."""
+    classes: list[list[str]] = Field(min_length=1, max_length=8)
+
+
+class McsegClass(BaseModel):
+    """One step marked on the reference: its range (inclusive) and the clip cut from it."""
+    name: str = Field("", max_length=200)
+    description: str = Field("", max_length=2000)
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+    clip_id: str
+
+    @model_validator(mode="after")
+    def _order(self):
+        if self.end < self.start:
+            raise ValueError("a marked range must end at or after its start")
+        return self
+
+
+class McsegSearchRequest(BaseModel):
+    """Find where each of `classes` (marked on `ref_upload_id`) happens in `target_ids`."""
+    ref_upload_id: str
+    classes: list[McsegClass] = Field(min_length=1, max_length=8)
+    target_ids: list[str] = Field(min_length=1, max_length=3)
+    #: "similarity": per class, the top `coverage` by similarity to its marked frames;
+    #: "knn": a balanced kNN vote over the classes plus the rest of the reference
+    candidates: Literal["similarity", "knn"] = "similarity"
+    knn_k: int = Field(15, ge=1, le=200)
+    knn_threshold: float = Field(0.25, gt=0.0, lt=1.0)
+    coverage: float = Field(0.25, gt=0.0, le=1.0)
+    use_description: bool = True
+    stride: int = Field(5, ge=1, le=30)
+
+    @model_validator(mode="after")
+    def _disjoint(self):
+        r = sorted((c.start, c.end) for c in self.classes)
+        if any(b0 <= a1 for (_, a1), (b0, _) in zip(r, r[1:])):
+            raise ValueError("the marked ranges overlap: each frame can belong to one step only")
+        return self
+
+
 class FawadSegRequest(BaseModel):
     """The research's class_N_desc_vlm_hints pipeline on a target video (fawadseg.py).
 

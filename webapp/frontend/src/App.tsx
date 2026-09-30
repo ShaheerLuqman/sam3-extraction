@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import './App.css'
 import { ExtractPage } from './extract/ExtractPage'
 import { FawadSegPage } from './extract/FawadSegPage'
+import { McsegPage } from './extract/McsegPage'
 import { SegxPage } from './extract/SegxPage'
 import { HistoryDrawer } from './components/HistoryDrawer'
 import { StatusPill } from './components/StatusPill'
@@ -12,12 +13,12 @@ import { StepVideo } from './steps/StepVideo'
 import { useWorkspace, type Step } from './lib/workspace'
 import type { Health, HealthConfig } from './api/client'
 
-type Mode = 'track' | 'extract' | 'segment' | 'fawad'
+type Mode = 'track' | 'extract' | 'segment' | 'multiclass' | 'fawad'
 
 function savedMode(): Mode {
   try {
     const m = localStorage.getItem('sam3.mode')
-    return m === 'extract' || m === 'segment' || m === 'fawad' ? m : 'track'
+    return m === 'extract' || m === 'segment' || m === 'multiclass' || m === 'fawad' ? m : 'track'
   } catch {
     return 'track'
   }
@@ -59,7 +60,9 @@ export default function App() {
                   ? 'Find the frames that match reference images'
                   : mode === 'segment'
                     ? 'Find where a step happens, from clips of it in other videos'
-                    : 'Find a step, from a labelled reference video (the research pipeline, as is)'}
+                    : mode === 'multiclass'
+                      ? 'Find where each of several steps happens, in up to three videos'
+                      : 'Find a step, from a labelled reference video (the research pipeline, as is)'}
             </span>
           </span>
         </div>
@@ -72,6 +75,9 @@ export default function App() {
           </button>
           <button type="button" className={mode === 'segment' ? 'on' : ''} onClick={() => setMode('segment')}>
             Segment extraction
+          </button>
+          <button type="button" className={mode === 'multiclass' ? 'on' : ''} onClick={() => setMode('multiclass')}>
+            Multiple class segmentation
           </button>
           <button type="button" className={mode === 'fawad' ? 'on' : ''} onClick={() => setMode('fawad')}>
             Frame extraction fawad segment
@@ -93,6 +99,9 @@ export default function App() {
           </div>
           <div className="modepane" hidden={mode !== 'segment'}>
             <SegxPage cfg={cfg} qwen={health?.qwen} />
+          </div>
+          <div className="modepane" hidden={mode !== 'multiclass'}>
+            <McsegPage cfg={cfg} qwen={health?.qwen} />
           </div>
           <div className="modepane" hidden={mode !== 'fawad'}>
             <FawadSegPage cfg={cfg} qwen={health?.qwen} />

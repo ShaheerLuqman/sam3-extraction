@@ -31,6 +31,7 @@ from .classes import ClassStore  # noqa: E402
 from .routes import classes as classes_routes  # noqa: E402
 from .routes import extract as extract_routes  # noqa: E402
 from .routes import fawadseg as fawadseg_routes  # noqa: E402
+from .routes import mcseg as mcseg_routes  # noqa: E402
 from .routes import segx as segx_routes  # noqa: E402
 from .routes import health, jobs_routes, runs as runs_routes, uploads  # noqa: E402
 from .runs import RunStore  # noqa: E402
@@ -126,6 +127,7 @@ app.include_router(jobs_routes.router, prefix="/api")
 app.include_router(runs_routes.router, prefix="/api")
 app.include_router(extract_routes.router, prefix="/api")
 app.include_router(segx_routes.router, prefix="/api")
+app.include_router(mcseg_routes.router, prefix="/api")
 app.include_router(fawadseg_routes.router, prefix="/api")
 app.mount("/api/files", StaticFiles(directory=config.RESULT_DIR), name="files")
 app.mount("/api/proxies", StaticFiles(directory=config.PROXY_DIR), name="proxies")

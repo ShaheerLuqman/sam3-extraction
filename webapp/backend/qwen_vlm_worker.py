@@ -19,6 +19,12 @@ Requests:
       For each centre, a ~2 s clip of the target goes to the model after the
       labelled example clips; P(A) from the first answer token's logprobs.
       The method of qwen_vl/extraction_project/scripts/vlm_classify.py.
+
+  {"op": "classify_multi", "letters": ["A", "B", "C", "D"], "options": {letter: text},
+   "examples": {letter: [...]}, "target": {...}, "clip_frames": 8, "clip_step": 5,
+   "out": "p.npy"}
+      The same with any number of options (multiple class segmentation: one per
+      step, the last for anything else); writes P per letter, (n_centers, n_letters).
 """
 from __future__ import annotations
 
@@ -162,15 +168,9 @@ class VLM:
         json.dump(d, open(req["out"], "w"))
 
     # -- classify ------------------------------------------------------------ #
-    def classify(self, req: dict) -> None:
-        from vllm import SamplingParams
-
-        n, step = int(req.get("clip_frames", 8)), int(req.get("clip_step", 5))
-        letters = ["A", "B"]
-        opts = req["options"]
-        ex = req["examples"]
-
-        # the example clips, the same ones in every prompt (prefix-cached)
+    @staticmethod
+    def examples(ex: dict, letters: list[str], n: int, step: int) -> tuple[list, list]:
+        """The example clips, the same ones in every prompt (prefix-cached)."""
         ex_items, ex_content = [], []
         for letter in letters:
             for e in ex.get(letter, []):
@@ -181,6 +181,13 @@ class VLM:
                     continue
                 ex_items.append(as_video([fr[f] for f in idx], idx, float(e["fps"])))
                 ex_content += [{"type": "text", "text": f"Example of {letter}:"}, {"type": "video"}]
+        return ex_items, ex_content
+
+    def classify(self, req: dict) -> None:
+        n, step = int(req.get("clip_frames", 8)), int(req.get("clip_step", 5))
+        letters = ["A", "B"]
+        opts = req["options"]
+        ex_items, ex_content = self.examples(req["examples"], letters, n, step)
         with_b = any(c["text"] == "Example of B:" for c in ex_content if c["type"] == "text")
         content = [{"type": "text", "text":
                     "These clips come from fixed cameras at a manual workstation. Each clip is about "
@@ -194,11 +201,42 @@ class VLM:
                      "the workpiece, the tool, and where the hands work with the examples"
                      + (" of both options" if with_b else "") +
                      ". Answer with a single letter: A or B."}]
-        prompt = self.prompt(content)
         say("PROGRESS 0.02 example clips ready")
+        probs = self.run_targets(self.prompt(content), ex_items, req["target"], letters, n, step)
+        np.save(req["out"], probs[:, 0])
+
+    def classify_multi(self, req: dict) -> None:
+        """Several steps and "anything else": one letter each, P per letter per clip.
+
+        As classify, with the options as letters A, B, C, ...; the last is the catch-all.
+        Writes an (n_centers, n_letters) array in the order of `letters`."""
+        n, step = int(req.get("clip_frames", 8)), int(req.get("clip_step", 5))
+        letters = list(req["letters"])
+        opts = req["options"]
+        ex_items, ex_content = self.examples(req["examples"], letters, n, step)
+        listing = "\n".join(f"{k} = {opts[k]}" for k in letters)
+        content = [{"type": "text", "text":
+                    "These clips come from fixed cameras at a manual workstation. Each clip is about "
+                    "two seconds long. The options are:\n"
+                    f"{listing}\n"
+                    "Here are labelled example clips from another recording of the same station.\n"}]
+        content += ex_content
+        content += [{"type": "text", "text": "Now the clip to classify:"}, {"type": "video"},
+                    {"type": "text", "text":
+                     "Which option does this last clip show? Compare the state and orientation of "
+                     "the workpiece, the part being handled, and where the hands work with the "
+                     "examples of each option. Answer with a single letter: "
+                     + ", ".join(letters[:-1]) + f" or {letters[-1]}."}]
+        say("PROGRESS 0.02 example clips ready")
+        probs = self.run_targets(self.prompt(content), ex_items, req["target"], letters, n, step)
+        np.save(req["out"], probs)
+
+    def run_targets(self, prompt: str, ex_items: list, tgt: dict, letters: list[str],
+                    n: int, step: int) -> np.ndarray:
+        """P(letter) for a clip around each target centre: (n_centers, n_letters)."""
+        from vllm import SamplingParams
 
         # target clips: one sequential decode, each clip handed off as soon as it is whole
-        tgt = req["target"]
         total, fps = int(tgt["total"]), float(tgt["fps"])
         centers = [int(c) for c in tgt["centers"]]
         clips = [clip_indices(c, n, step, total) for c in centers]
@@ -210,7 +248,7 @@ class VLM:
         by_last: dict[int, list[int]] = {}
         for q, f in enumerate(last_of):
             by_last.setdefault(f, []).append(q)
-        probs = np.full(len(clips), np.nan, np.float32)
+        probs = np.full((len(clips), len(letters)), np.nan, np.float32)
         store: dict[int, np.ndarray] = {}
         batch: list[int] = []
         sp = SamplingParams(temperature=0.0, max_tokens=1, logprobs=20)
@@ -225,11 +263,12 @@ class VLM:
                 as_video([store[f] for f in clips[q]], clips[q], fps)]}} for q in batch]
             outs = self.llm.generate(inputs, sp, use_tqdm=False)
             for q, o in zip(batch, outs):
-                probs[q] = letter_probs(o.outputs[0].logprobs[0], letters)["A"]
+                lp = letter_probs(o.outputs[0].logprobs[0], letters)
+                probs[q] = [lp[k] for k in letters]
             done += len(batch)
             batch.clear()
             # frames no pending clip needs any more
-            keep = {f for q in range(len(clips)) if np.isnan(probs[q]) for f in clips[q]}
+            keep = {f for q in range(len(clips)) if np.isnan(probs[q, 0]) for f in clips[q]}
             for f in [f for f in store if f not in keep]:
                 del store[f]
             rate = done / max(time.time() - t0, 1e-6)
@@ -256,10 +295,11 @@ class VLM:
             finally:
                 cap.release()
             flush()
-        np.save(req["out"], probs)
+        return probs
 
     def handle(self, req: dict) -> None:
-        {"describe": self.describe, "classify": self.classify}[req["op"]](req)
+        {"describe": self.describe, "classify": self.classify,
+         "classify_multi": self.classify_multi}[req["op"]](req)
 
 
 def main(cfg: dict) -> None:

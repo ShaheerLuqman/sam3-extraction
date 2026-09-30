@@ -9,6 +9,8 @@ type Props = {
   /** ranges already marked on this video */
   steps: [number, number][]
   others: [number, number][]
+  /** optional ranges in a colour of their own (multiple class segmentation's steps) */
+  colored?: { start: number; end: number; color: string }[]
   markIn: number | null
   markOut: number | null
   onSeek: (f: number) => void
@@ -87,6 +89,7 @@ export function MarkTimeline(p: Props) {
     }
     for (const [a, b] of p.others) range(a, b, C.otherSoft, C.other)
     for (const [a, b] of p.steps) range(a, b, C.stepSoft, C.step)
+    for (const r of p.colored ?? []) range(r.start, r.end, `${r.color}33`, r.color)
 
     // the selection being set, with a flag on each end that is set
     const { markIn: mi, markOut: mo } = p

@@ -1,0 +1,76 @@
+/* --- multiple class segmentation ------------------------------------------ */
+.mcchip {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 650;
+  vertical-align: 1px;
+  font-variant-numeric: tabular-nums;
+}
+.xbadge.mcbadge {
+  color: #fff;
+}
+.card.mcclass {
+  border-left-width: 4px;
+}
+.mclegend {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+.mctargets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mctarget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.mctarget.on {
+  border-color: var(--brand-line);
+  background: var(--brand-soft);
+}
+.mctarget-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px 8px 10px;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+.mctarget-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mcgroup + .mcgroup {
+  margin-top: 10px;
+}
+.mcgroup h4 {
+  margin: 8px 0 6px;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
