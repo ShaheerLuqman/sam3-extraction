@@ -257,6 +257,9 @@ class SegxCutRequest(BaseModel):
     upload_id: str
     start: int = Field(ge=0)
     end: int = Field(ge=0)
+    #: make the clip the way the page does from a local MP4 (lib/localVideo grabFrames):
+    #: frames scaled to fit this many pixels on the long side, as JPEGs, then encoded
+    max_side: Optional[int] = Field(None, ge=64, le=8192)
 
 
 class SegxDescribeRequest(BaseModel):

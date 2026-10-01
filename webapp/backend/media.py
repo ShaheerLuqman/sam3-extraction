@@ -231,6 +231,40 @@ def cut(path: str | Path, start: int, end: int, fps: float, dest: str | Path) ->
     return n
 
 
+def cut_as_page(path: str | Path, start: int, end: int, fps: float, dest: str | Path,
+                max_side: int) -> int:
+    """`cut`, but the clip made the way the page makes one from a local MP4
+    (lib/localVideo grabFrames + /segx/clip-frames): each frame scaled so its long
+    side is at most `max_side` (even dimensions), saved as JPEG at quality 92,
+    and the JPEGs encoded with encode_frames. Frames are picked by decoded-frame
+    number, which is what the page's sample-table seeking lands on."""
+    work = Path(config.TMP_DIR) / f"cut_{Path(dest).stem}"
+    work.mkdir(parents=True, exist_ok=True)
+    cap = cv2.VideoCapture(str(path))
+    n = 0
+    try:
+        for i in range(end + 1):
+            if i < start:
+                if not cap.grab():
+                    break
+                continue
+            ok, bgr = cap.read()
+            if not ok:
+                break
+            h, w = bgr.shape[:2]
+            scale = min(1.0, max_side / max(w, h))
+            size = (round(w * scale / 2) * 2, round(h * scale / 2) * 2)
+            if size != (w, h):
+                bgr = cv2.resize(bgr, size, interpolation=cv2.INTER_AREA)
+            cv2.imwrite(str(work / f"{n:06d}.jpg"), bgr, [cv2.IMWRITE_JPEG_QUALITY, 92])
+            n += 1
+        cap.release()
+        return encode_frames(work, fps, dest) if n else 0
+    finally:
+        cap.release()
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def encode_frames(folder: str | Path, fps: float, dest: str | Path) -> int:
     """folder/000000.jpg, 000001.jpg, ... -> a near-lossless mp4 at `fps`, one frame
     per image. Returns the frames written."""

@@ -45,7 +45,10 @@ async def cut(request: Request, body: SegxCutRequest) -> dict:
     end = min(body.end, last) if last >= 0 else body.end
     fps = float(src.fps or 20.0)
     dest = config.UPLOAD_DIR / f"{uuid.uuid4().hex[:12]}.mp4"
-    n = await run_in_threadpool(media.cut, src.path, body.start, end, fps, dest)
+    if body.max_side:
+        n = await run_in_threadpool(media.cut_as_page, src.path, body.start, end, fps, dest, body.max_side)
+    else:
+        n = await run_in_threadpool(media.cut, src.path, body.start, end, fps, dest)
     if n <= 0:
         dest.unlink(missing_ok=True)
         raise HTTPException(400, f"frames {body.start}-{end} could not be decoded")
