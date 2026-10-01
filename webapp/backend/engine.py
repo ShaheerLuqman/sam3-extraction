@@ -707,6 +707,33 @@ class Engine:
             "objects": len(results), "frames": n, "width": W, "height": H, "message": msg,
         }
 
+    # -- segment tracking, JSON only ------------------------------------ #
+    def track_segment(self, clip_path: str, objects: list[dict],
+                      progress_cb: Callable[[float, str], None],
+                      cancel: threading.Event) -> dict:
+        """run_multitrack's box tracking without the composited video: the
+        per-frame boxes and mask outlines go back as JSON. Always bidirectional:
+        forward from each object's first seed and back from its last, so a seed
+        is propagated both ways unless it sits on the clip's first or last frame.
+        Seed frames are clip-relative."""
+        self._require_loaded()
+        self.clear_frames()
+        frames, _fps = _read_frames(clip_path, 1_000_000)
+        if not frames:
+            raise RuntimeError("could not read frames from the segment clip")
+        H, W = frames[0].shape[:2]
+        n = len(frames)
+        objs = [{**o, "color": [0, 0, 0]} for o in objects]
+        results = self._track_boxes(frames, W, H, n, objs, True, progress_cb, cancel)
+        return {
+            "width": W, "height": H, "frames": n,
+            "box_format": "[x1, y1, x2, y2] pixels; frame i of the lists is clip frame i",
+            "objects": [{"name": r["name"],
+                         "boxes": [fb[0] if fb else None for fb in r["per_frame"]],
+                         "polygons": [fp[0] if fp else [] for fp in r["_polys"]]}
+                        for r in results],
+        }
+
     # -- box tracking via model.tracker --------------------------------- #
     def _track_boxes(self, frames, W, H, n, box_objs, bidir, progress_cb, cancel,
                      images=None) -> list[dict]:

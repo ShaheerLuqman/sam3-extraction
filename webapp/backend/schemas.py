@@ -92,6 +92,47 @@ class MultiTrackRequest(BaseModel):
     objects: list[TrackObject] = Field(min_length=1, max_length=20)
 
 
+class SegmentTrackObject(BaseModel):
+    """One tracked identity: its labelled frames (absolute video frame numbers)."""
+    name: str = Field(min_length=1, max_length=60)
+    seeds: list[Seed] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _one_per_frame(self):
+        if len({s.frame for s in self.seeds}) != len(self.seeds):
+            raise ValueError(f"object {self.name!r} has two prompts on one frame")
+        return self
+
+
+class SegmentTrackRequest(BaseModel):
+    """Track objects over frames start..end (inclusive) of a video, from the frames
+    they were labelled on. JSON only: no rendered video."""
+    upload_id: str
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+    objects: list[SegmentTrackObject] = Field(min_length=1, max_length=20)
+
+    @model_validator(mode="after")
+    def _range(self):
+        if self.end < self.start:
+            raise ValueError("the segment ends before it starts")
+        # every frame is held in memory at full resolution while tracking
+        if self.end - self.start + 1 > 1800:
+            raise ValueError("segments over 1800 frames are too long to track in one go")
+        for o in self.objects:
+            for s in o.seeds:
+                if not self.start <= s.frame <= self.end:
+                    raise ValueError(f"object {o.name!r}: frame {s.frame} is outside {self.start}-{self.end}")
+        return self
+
+
+class UploadFromUrlRequest(BaseModel):
+    """A video the server downloads itself (e.g. an S3 presigned URL), instead of
+    the caller sending the file."""
+    url: str = Field(min_length=1, max_length=4096)
+    name: str = Field("", max_length=255)  # original file name; else taken from the URL
+
+
 class ClickPreviewRequest(BaseModel):
     """Clicks (+ optional box) on one frame -> the mask the tracker would seed with."""
     upload_id: str

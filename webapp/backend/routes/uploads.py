@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from urllib.parse import urlparse
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from .. import config, media
+from ..schemas import UploadFromUrlRequest
 
 router = APIRouter()
 
@@ -40,9 +43,49 @@ async def create_upload(request: Request, file: UploadFile) -> dict:
                 raise HTTPException(413, "file exceeds the 500 MB limit")
             out.write(chunk)
 
+    return await _register(request, dest, kind, Path(file.filename or "").name or dest.name)
+
+
+@router.post("/uploads/from-url")
+async def create_upload_from_url(request: Request, body: UploadFromUrlRequest) -> dict:
+    """Like /uploads, but the server fetches the video from `url` itself (an S3
+    presigned URL, say), so it never has to pass through the caller's network.
+    Videos only; the response is the same as /uploads'."""
+    if urlparse(body.url).scheme not in ("http", "https"):
+        raise HTTPException(400, "url must be http(s)")
+    name = Path(body.name or urlparse(body.url).path).name
+    ext = Path(name).suffix.lower() or ".mp4"
+    if ext not in _VIDEO_EXT:
+        raise HTTPException(415, f"unsupported video type: {name!r}")
+    dest = config.UPLOAD_DIR / f"{_tmp_name()}{ext}"
+    try:
+        await run_in_threadpool(_download, body.url, dest)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
+    except (httpx.HTTPError, OSError) as exc:
+        dest.unlink(missing_ok=True)
+        raise HTTPException(502, f"could not download the video: {exc}") from exc
+    return await _register(request, dest, "video", name or dest.name)
+
+
+def _download(url: str, dest: Path) -> None:
+    size = 0
+    with httpx.stream("GET", url, timeout=httpx.Timeout(30, read=300), follow_redirects=True) as res:
+        if res.is_error:
+            raise HTTPException(502, f"could not download the video ({res.status_code})")
+        with dest.open("wb") as out:
+            for chunk in res.iter_bytes(1 << 20):
+                size += len(chunk)
+                if size > config.UPLOAD_MAX_BYTES:
+                    raise HTTPException(413, "file exceeds the 500 MB limit")
+                out.write(chunk)
+
+
+async def _register(request: Request, dest: Path, kind: str, original: str) -> dict:
+    """Probe a file saved under UPLOAD_DIR and add it to the upload store."""
     store = request.app.state.uploads
     try:
-        original = Path(file.filename or "").name or dest.name
         if kind == "video":
             meta = await run_in_threadpool(media.probe, dest)
             up = store.add("video", dest, meta["width"], meta["height"], name=original,

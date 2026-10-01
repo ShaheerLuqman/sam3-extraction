@@ -15,6 +15,7 @@ from ..schemas import (
     MultiTrackRequest,
     PrepareRequest,
     PrepClipRequest,
+    SegmentTrackRequest,
 )
 
 router = APIRouter()
@@ -226,6 +227,42 @@ def video_track(request: Request, body: MultiTrackRequest):
             runs.fail(job.id, f"{type(exc).__name__}: {exc}")
             raise
         runs.finish(job.id, r)
+        return r
+
+    registry.submit(job, fn)
+    return {"job_id": job.id}
+
+
+@router.post("/jobs/segment-track", status_code=202)
+def segment_track(request: Request, body: SegmentTrackRequest):
+    """Track objects across frames start..end of a video from their labelled
+    frames. Unlike video-track, it covers just that range (not 0..max_frames),
+    renders nothing, and returns the mask outlines as well as the boxes; frame
+    numbers in the result are clip-relative, so absolute = `start` + i."""
+    up = _video_upload(request, body.upload_id)
+    last = (up.frames or 0) - 1
+    if last >= 0 and body.start > last:
+        raise HTTPException(400, f"frame {body.start} is past the end of the video (0..{last})")
+    end = min(body.end, last) if last >= 0 else body.end
+    objects = [{"name": o.name,
+                "seeds": [{**s.model_dump(), "frame": min(s.frame, end) - body.start} for s in o.seeds]}
+               for o in body.objects]
+
+    engine = request.app.state.engine
+    registry = request.app.state.jobs
+    job = registry.create("segment-track")
+
+    def fn(progress_cb: Callable[[float, str], None], cancel: threading.Event) -> dict:
+        progress_cb(0.01, "cutting the segment")
+        clip = config.TMP_DIR / f"{job.id}_segment.mp4"
+        n = media.cut(up.path, body.start, end, float(up.fps or 20.0), clip)
+        if n <= 0:
+            raise RuntimeError(f"frames {body.start}-{end} could not be decoded")
+        try:
+            r = engine.track_segment(str(clip), objects, progress_cb, cancel)
+        finally:
+            clip.unlink(missing_ok=True)
+        r["start"] = body.start
         return r
 
     registry.submit(job, fn)
